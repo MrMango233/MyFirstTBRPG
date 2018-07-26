@@ -1,0 +1,326 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+//颜色使用：玩家绿色，怪物深黄，状态用青色（Cyan），其他白色。
+//暴击可以用愤怒系统来处理，随机数达到x条件时伤害乘数。
+//BeHealed技能还没做完。
+namespace FirstGame
+{
+    enum SkillType
+    {
+        Damage=1,
+        Heal=2,
+        Buff=3
+    }
+    class Skill
+    {
+        double _damage = 0;
+        double multiplyBuff = 1;
+        double multiplyCritical = 1;
+        public double damage
+        {
+            get
+            {
+                return _damage*multiplyBuff*multiplyCritical;
+            }
+            private set
+            {
+                _damage = value;
+            }
+        }
+        public double magicCost;
+        public SkillType skillType;
+        public Skill(SkillType _skillType,double _damage, double _magicCost)
+        {
+            skillType = _skillType;
+            damage = _damage;
+            magicCost = _magicCost;
+        }
+        public void BuffSkillDamageMultiply(double multiBuff)
+        {
+            multiplyBuff = multiBuff;
+
+        }
+        public void CriticalSkillDamageMultiply(double multiCritical)
+        {
+            multiplyCritical = multiCritical;
+        }
+        public SkillType type
+        {
+            get { return skillType; }
+        }
+    }
+    class Role
+    {
+        public double hp;
+        protected double maxHp;
+        public double phyattack;
+        public double phydefense;
+        public double magattack;
+        public double magdefense;
+        public double magic;
+        public List<Skill> skills = new List<Skill>();
+        protected Random random = new Random();
+        virtual public Skill SelectSkill()
+        {
+            return null;
+        }
+        public Role(double _hp, double _phyattack, double _phydefense, double _magattack, double _magdefense, double _magic)
+        {
+            hp = _hp;
+            maxHp = _hp;
+            phyattack = _phyattack;
+            phydefense = _phydefense;
+            magattack = _magattack;
+            magdefense = _magdefense;
+            magic = _magic;
+
+        }
+        public virtual void BeHit(double cost_hp, string attackDealer, string attackTaker)
+        {
+            Console.WriteLine("错误。");
+        }
+        public virtual void BeHealed(double add_hp, string healDealer, string healTaker)
+        {
+            Console.WriteLine("错误。");
+        }
+    }
+    class Player : Role
+    {
+        public Player(double _hp, double _phyattack, double _phydefense, double _magattack, double _magdefense, double _magic) : base(_hp, _phyattack, _phydefense,_magattack, _magdefense,_magic)
+        {
+
+        }
+        public override Skill SelectSkill()
+        {
+            while (true)
+            {
+                Console.WriteLine("请选择你要释放的技♂能（输入{0}-{1}）", 1, skills.Count);
+                string skilltype = Console.ReadLine();
+                int result;
+                if (int.TryParse(skilltype, out result))
+                {
+                    int _skilltype = Convert.ToInt16(skilltype);
+                    if (_skilltype > 0 && _skilltype <= skills.Count)
+                    {
+                        if(_skilltype==1)
+                        {
+
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("比利王使用了ASS♂WE♂CAN的招式！");
+                        }
+                        if(_skilltype==2)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("比利王使用了乖♂乖♂站好的招式！");
+                        }
+                        if (_skilltype == 3)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("比利王使用了告♂诫の心的招式！");
+                        }
+                        if (_skilltype == 4)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("比利王使用了必杀技，炒♂饭♂烧！");
+                        }
+                        return skills[_skilltype - 1];
+                    }
+                    else
+                    {
+                        Console.WriteLine("请输入正确的数字。");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("请输入正确的数字。");
+                }
+
+            }
+        }
+        public override void BeHealed(double add_hp, string healDealer, string healTaker)
+        {
+            hp += add_hp;
+            Console.WriteLine($"{healDealer}为{healTaker}回复了{add_hp}点生命值，{healTaker}恢复到{hp}点生命值。");
+        }
+        public override void BeHit(double cost_hp, string attackDealer, string attackTaker)
+        {
+            //愤怒系统
+
+            if (hp <= maxHp / 0.5)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("你愤怒了，所有伤害增加。");
+                foreach (var skill in skills)
+                {
+                    skill.BuffSkillDamageMultiply(1.9);
+                }
+            }
+
+
+            //暴击系统
+            int criticalx = random.Next(0, 96);
+            foreach (var skill in skills)
+            {
+                skill.CriticalSkillDamageMultiply(1);
+            }
+            if (criticalx % 5 == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("你打中了怪物的弱点，造成了巨额的伤害。");
+                foreach (var skill in skills)
+                {
+                    skill.CriticalSkillDamageMultiply(2);
+                }
+            }
+            if (criticalx % 19 == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("你打中了怪物的弱点，造成了成吨的伤害。");
+                foreach (var skill in skills)
+                {
+                    skill.CriticalSkillDamageMultiply(5);
+                }
+            }
+
+
+            //血量机制
+            hp -= cost_hp;
+            if (hp < 0)
+            {
+                hp = 0;
+            }
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.WriteLine($"{attackDealer}对{attackTaker}造成了{cost_hp}点伤害，{attackTaker}还剩{hp}点生命值。");
+        }
+    }
+    class Monster : Role
+    {
+        public Monster(double _hp, double _phyattack, double _phydefense, double _magattack, double _magdefense, double _magic):base(_hp,_phyattack,_phydefense,_magattack,_magdefense,_magic)
+        {
+            
+        }
+        public override Skill SelectSkill()
+        {
+            int skillX = random.Next(0, skills.Count);
+            if(skillX==0)
+            {
+                Console.WriteLine("van♂様发动了技能FA♂Q！");
+            }
+            if(skillX==1)
+            {
+                Console.WriteLine("van♂様发动了技能Boy♂Next♂Door！");
+            }
+            if(skillX==2)
+            {
+                Console.WriteLine("van♂様发动了技能Take♂It♂Boy！");
+            }
+            if(skillX==3)
+            {
+                Console.WriteLine("van♂様发动了技能Deep♂Dark♂Fantasy！");
+            }
+            return skills[skillX];
+        }
+        public override void BeHealed(double add_hp, string healDealer, string healTaker)
+        {
+            hp += add_hp;
+            Console.WriteLine($"{healDealer}为{healTaker}回复了{add_hp}点生命值，{healTaker}恢复到{hp}点生命值。");
+        }
+        public override void BeHit(double cost_hp, string attackDealer, string attackTaker)
+        {
+            hp -= cost_hp;
+            if (hp < 0)
+            {
+                hp = 0;
+            }
+            Console.WriteLine($"{attackDealer}对{attackTaker}造成了{cost_hp}点伤害，{attackTaker}还剩{hp}点生命值。");
+            if(hp<maxHp/5)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("怪物愤怒了，所有伤害增加。");
+                foreach(var skill in skills)
+                {
+                    skill.BuffSkillDamageMultiply(1);
+                }
+            }
+        }
+    }
+    class Program
+    {
+        static Player player;
+        static Monster monster1;
+        static Role SkillTarget(Skill skill, Role attackDealer, Role attackTaker)
+        {
+            if(skill.type==SkillType.Damage)
+            {
+                return attackTaker;
+            }
+            else if(skill.type == SkillType.Heal)
+            {
+                return attackDealer;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        static void Main(string[] args)
+        {
+            Player player = new Player(200, 10, 3, 1, 1, 30);
+            //玩家技能
+            player.skills.Add(new Skill(SkillType.Damage,10, 0));
+            player.skills.Add(new Skill(SkillType.Damage, 15, 5));
+            player.skills.Add(new Skill(SkillType.Damage, 20, 10));
+            player.skills.Add(new Skill(SkillType.Damage, 25, 15));
+            //怪物技能
+            Monster monster1 = new Monster(200, 6, 1, 0.95, 0.95, 20);
+            monster1.skills.Add(new Skill(SkillType.Damage,10, 0));
+            monster1.skills.Add(new Skill(SkillType.Damage, 15, 5));
+            monster1.skills.Add(new Skill(SkillType.Damage, 20, 10));
+            monster1.skills.Add(new Skill(SkillType.Damage, 25, 12));
+            //Battle
+            Skill skill;
+            while (player.hp > 0 && monster1.hp > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                //玩家进攻
+                skill = player.SelectSkill();
+                Role Target = SkillTarget(skill, player, monster1);
+                if(Target==player)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    monster1.BeHealed(skill.damage, "你", "你自己");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    monster1.BeHit(skill.damage, "你", "怪物");
+                }
+
+                
+                
+                
+                
+                
+                //怪物进攻
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                skill = monster1.SelectSkill();
+                player.BeHit(skill.damage, "怪物", "你");
+            }
+            if (player.hp > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine("玩家获胜！");
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("玩家失败！");
+            }
+            Console.ReadKey();
+        }
+    }
+}
